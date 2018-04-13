@@ -1,0 +1,62 @@
+#+TITLE: Economist article reading (2018)
+#+LaTeX_CLASS: en-article
+
+* 2018-04-14 What to make of Mark Zuckerberg’s testimony
+** Both the Facebook boss and his questioners in Congress fail to reassure
+
+SAYING sorry can be an enriching experience. For Mark Zuckerberg, who this 
+week endured two days of questioning in front of Congress, the rewards of 
+contrition are not just metaphorical. Over the course of his testimony, as 
+the Facebook boss apologised for the leakage of data on 87m users to a 
+political-campaign firm, his company’s shares rose by 5.7% and his own net worth by $3.2bn.
+
+Shareholders were doubtless relieved by Mr Zuckerberg’s robotic but 
+gaffe-free display. And even the firm’s fiercest critics ought to 
+acknowledge the distance that it has travelled since the Cambridge 
+Analytica story broke in March. Mr Zuckerberg welcomed the idea of 
+regulation and cautiously endorsed a forthcoming European law on data 
+protection. By saying explicitly that Facebook was responsible for the 
+content on its platform, he has opened the door to bearing greater 
+liability for the material it carries. But the bounce in the share price 
+also signals something worrying: that neither the firm nor American 
+legislators have grasped the need for radical change.
+
+Start with Facebook. Mr Zuckerberg told Congress that any firm that has 
+grown at the speed of Facebook was bound to make mistakes. But the 
+dorm-room excuse is wearing thin. Facebook is the sixth-most-valuable 
+listed firm on the planet. It spent $11.5m on lobbying in Washington in 2017. Its endless guff about “community” counts for little when it has 
+repeatedly and flagrantly disregarded its users’ rights to control their 
+own data. The company has carried out lots of fiddles in recent weeks—from making privacy settings clearer to promising an audit of suspicious apps. 
+But it should go much further.
+
+An internal investigation into how third-party apps have been using 
+Facebook users’ data is not enough to restore trust: it should appoint an 
+outside firm to conduct a full independent examination of its own conduct. 
+That would help address lingering questions; Cambridge Analytica may be 
+just one of many such outfits to have got hold of user data, for example. 
+The appointment of an independent chairman would be another way to improve 
+the quality of debate and scrutiny within Facebook. Along with other tech firms, it should create an industry ombudsman whose jobs would include 
+making access to platforms easier for independent researchers. Instead of 
+opening up, however, the risk is that Facebook will throw up walls: its 
+decision to kick third-party data-brokers off the platform has the 
+convenient effect of both protecting users’ data and entrenching its power 
+as a source of those data.
+
+Even if Facebook did all this, there would still be a need for 
+data-protection regulation in America. Mr Zuckerberg has a majority of the 
+voting rights at the company: an independent chairman would not stop him 
+wielding ultimate control. The firm’s advertising-led business model 
+incentivises it to turn users’ personal data into targets for ads. 
+Facebook has said nothing about allowing people to opt out of being 
+tracked across the web. It is inherently hard for users of online services 
+to make informed choices about how their data should be stored. 
+In any case, these issues span more firms than Facebook.
+
+That leads to the other concern raised by this week’s hearings: the 
+capacity of policymakers to put together good legislation. Where Mr 
+Zuckerberg was competent, his interrogators were often clueless (see 
+article). One seemed not to know that the firm made money from advertising;
+another was more interested in getting Facebook to build fibre-optic cable 
+in her state. To work for its users, the data economy requires thoughtful 
+policy and a sea-change in the way tech firms are run. On this week’s 
+evidence, neither looks likely.
