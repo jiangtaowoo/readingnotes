@@ -1,0 +1,312 @@
+#+LaTeX_CLASS: jarticle
+#+TITLE: SICP 笔记
+
+* 基础语法
+  + *define*
+    #+BEGIN_SRC scheme
+    (define (funcname param1 param2)  (funcbody))
+    #+END_SRC
+  + *cond*
+    #+BEGIN_SRC scheme
+    (cond (cond1 exp1)
+          (cond2 exp2)
+          ...
+          (else elseexp))
+    #+END_SRC
+  + *if*
+    #+BEGIN_SRC scheme
+    (if predicate
+        consequent
+        alternative)
+    #+END_SRC
+  + *let*
+    #+BEGIN_SRC scheme
+    (let ((var1 exp1)
+          (var2 exp2)
+          ...
+          (varn expn))
+          body)
+    #+END_SRC
+  + *lambda*
+    #+BEGIN_SRC scheme
+    (lambda (p1 p2 ... pn) body)
+    #+END_SRC
+
+* 第 2 章 构造数据抽象
+   数据抽象是为了站在更高的层次去思考问题, 避免陷入复杂数据结构的细节之中。
+** 数据抽象导引
+   数据抽象是一种方法， 它使我们能将一个复合数据对象的 *使用*, 与该数据对象怎样由
+   更基本的数据对象构造起来的细节隔离开。\\
+   数据抽象的基本思想，就是设法构造出一些使用复合数据对象的程序(复合数据的构造程序
+   和选择程序)，使它们就像是在"抽象数据"上操作一样。
+*** 有理数运算实例
+    + *按愿望思维* 的强有力的综合策略\\
+      *假设* make-rat, numer, denom 已经实现, 接下来该如何进行有理数的加减乘除\\
+      加法 $$\frac{n_{1}}{d_{1}}+\frac{n_{2}}{d_{2}} = \frac{n_{1}d_{2}+n_{2}d_{1}}{d_{1}d_{2}}$$
+      实现过程:\\
+    #+BEGIN_SRC scheme
+      (define (add-rat x y)
+        (make-rat (+ (* (numer x) (denom y)) (* (numer y) (denom x)))
+           (* (denom x) (denom y)))
+    #+END_SRC
+    + *练习 2.1*
+    定义 make-rat 的更好版本, 使之可以正确处理正数和负数, 当有理数为正时,
+      make-rat 应将其规范化, 使分子分母都是正的. 如果有理数是负数, 则应让分子为负.
+    #+BEGIN_SRC scheme
+      (define (make-rat n d)
+        (let ((g (gcd n d)))
+          (cond ((> d 0) (cons (/ n g) (/ d g)))
+                ((< d 0) (cons (/ (- n) g) (/ (- d) g)))
+             )))
+    #+END_SRC
+*** 抽象屏障
+    *数据抽象* 的基本思想就是为每一类数据对象标识出一组操作, 使得对这类数据对象的
+    所有操作都可以基于它们表述, 而且在操作这些数据对象时也只使用它们。
+#+BEGIN_SRC
+          |------------------------------------------|
+    ------|             使用有理数的程序             |------
+          |------------------------------------------|
+                         问题域中的有理数
+              |-------------------------------------|
+    ----------|         add-rat sub-rat ...         |-------
+              |-------------------------------------|
+                      作为分子和分母的有理数
+                  |------------------------------|
+    --------------|     make-rat numer denom     |----------
+                  |------------------------------|
+                         作为序对的有理数
+                      |----------------------|
+    ------------------|    cons car cdr      |--------------
+                      |----------------------|
+#+END_SRC
+    + *练习 2.2*
+    线段的表示与打印
+    #+BEGIN_SRC scheme
+      (define (make-segment p1 p2) (cons p1 p2))
+      (define (start-segment s) (car s))
+      (define (end-segment s) (cdr s))
+      (define (make-point x y) (cons x y))
+      (define (x-point p) (car p))
+      (define (y-point p) (cdr p))
+      (define (midpoint-segment s)
+         (define (average a b) (/ (+ a b) 2))
+         (let ((p1 (start-segment s))
+               (p2 (end-segment s)))
+               (make-point (average (x-point p1) (x-point p2))
+                           (average (y-point p1) (y-point p2))))
+      (define (print-point p)
+         (newline)
+         (display "(")
+         (display (x-point p))
+         (display ",")
+         (display (y-point p))
+         (display ")"))
+    #+END_SRC
+*** 数据意味着什么
+    一般而言，总可以将数据定义为一组适当的选择函数和构造函数，以及为使这些过程成为
+    一套合法表示，它们必须满足的一组特定条件\\
+    下面的例子展示了 *数据的过程性表示* 的概念, 有关的程序设计风格通常称为"消息传递"
+    #+BEGIN_SRC scheme
+    (define (cons_ x y)
+      (define (dispatch m)
+         (cond ((= m 0) x)
+               ((= m 1) y)
+               (else (error "Argument not 0 or 1 -- CONS" m))))
+      dispatch)
+    (define (car_ z) (z 0))
+    (define (cdr_ z) (z 1))
+    #+END_SRC
+    + *练习 2.4*
+    序对的另一种过程性表示方法
+    #+BEGIN_SRC scheme
+    (define (cons_ x y)
+      (lambda (m) (m x y)))
+    (define (car_ z) (z (lambda (p q) p)))
+    (define (cdr_ z) (z (lambda (p q) q)))
+
+    car_ 展开后为
+    ((lambda (m) (m x y)) (lambda (p q) p))
+    然后后面的 lambda 函数替换参数 m, 得到
+    ((lambda (p q) p) x y)
+    再用 x,y 替换参数 p,q 得到
+    x
+    #+END_SRC
+    + *练习 2.5*
+    a,b 的序对表示为乘积 $2^{a} \cdot 3^{b}$ , 可以只用非负整数和算术运算
+      表示序对, 给出 cons, car, cdr 的定义
+    #+BEGIN_SRC scheme
+    (define (cons_ a b)
+      (define (sqb base t)
+        (if (= t 0)
+            1
+            (* base (sqb base (- t 1)))))
+      (* (sqb 2 a) (sqb 3 b)))
+    (define (extract-expt base n)
+       (define (iter-extract n acc)
+          (if (= (gcd base n) 1)
+              acc
+              (iter-extract (/ n base) (+ 1 acc))))
+       (iter-extract n 0))
+    (define (car_ z) (extract-expt 2 z))
+    (define (cdr_ z) (extract-expt 3 z))
+    ;(define (car_ z)
+    ;   (define (bqs base t)
+    ;      (if (= (gcd base t) 1)
+    ;          0
+    ;          (+ 1 (bqs base (/ t base)))))
+    ;   (bqs 2 z))
+    ;(define (cdr_ z)
+    ;   (define (bqs base t)
+    ;      (if (= (gcd base t) 1)
+    ;          0
+    ;          (+ 1 (bqs base (/ t base)))))
+    ;   (bqs 3 z))
+    #+END_SRC
+    + *练习 2.6*
+    不用数字来定义 One, Two 以及加法(Church 计数)
+    #+BEGIN_SRC scheme
+    (define zero (lambda (f) (lambda (x) x)))
+    (define (add-1 n)
+       (lambda (f) (lambda (x) (f ((n f) x)))))
+
+    (add-1 zero) 的代换过程
+    (lambda (f) ...), 其中 n 被替换为 zero, 结果仍然是一个匿名函数, 接收参数为 f
+    (zero  f)代换得到一个匿名函数
+    (lambda (x) x), 该匿名函数继续以 x 为参数运算得到 x
+    因此最后得到的函数体如下, 含义是, 对输入的数据/过程, 再应用一次 f(应用一次 f 就是一次计数)
+    (lambda (x) (f x))
+    总体结果为
+    (lambda (f) (lambda (x) (f x)))
+
+    (define one (lambda (f) (lambda (x) (f x))))
+    (define two (lambda (f) (lambda (x) (f (f x)))))
+    (define (add a b)
+      (lambda (f) (lambda (x) ((a f) ((b f) x) ))))
+    #+END_SRC
+*** 扩展练习: 区间算术
+    + *练习 2.7*
+    #+BEGIN_SRC scheme
+      (define (upper-bound x)
+        (let ((a (car x))
+              (b (cdr x)))
+           (if (> a b)
+               (+ a)
+               (+ b))))
+      (define (lower-bound x)
+        (let ((a (car x))
+              (b (cdr x)))
+           (if (> a b)
+               (+ b)
+               (+ a))))
+    #+END_SRC
+    + *练习 2.8*
+    #+BEGIN_SRC scheme
+      (define (add-interval x y)
+        (make-interval (+ (lower-bound x) (lower-bound y))
+                       (+ (upper-bound x) (upper-bound y))))
+      (define (sub-interval x y)
+        (make-interval
+        (- (lower-bound x) (upper-bound y))
+        (- (upper-bound x) (lower-bound y))))
+      (define (sub-interval x y)
+        (add-interval x (make-interval (- (lower-bound y)) 
+                                       (- (upper-bound y)))))
+    #+END_SRC
+    + *练习 2.12*
+    #+BEGIN_SRC scheme
+      (define (make-center-percent c p)
+        (make-interval (* (- 1 p) c)
+                       (* (+ 1 p) c)))
+      (define (percent i)
+        (/ (/ (- (upper-bound i) (lower-bound i)) 2)
+        (/ (+ (upper-bound i) (lower-bound i)) 2)))
+    #+END_SRC
+    + *练习 2.16*
+    区间算术缺陷的根本原因在于区间运算的本质是不确定性的累积运算，
+    其+-运算并不是互逆的，*/运算也不是互逆的，例如 A+A-A 的结果并不等于 A
+    相加运算的含义是两个区间不确定性的叠加；相减也仍然是另一种不确定性的叠加
+
+** 层次性数据和闭包性质
+   *闭包* 术语来自抽象代数, 一集元素称在某个运算(操作)之下封闭，如果将该运算应用与这一集合的元素，产生出的仍然是该集合的元素; 闭包也表示带有自由变量的过程而是用的实现技术；本书说的闭包不采用以上任何意义
+   *闭包* 某种组合数据对象的操作满足闭包性质，如果通过它组合得到的结果本身还可以通过同样的操作再进行组合
+*** 序列的表示
+   (cons 1 (cons 2 (cons 3 (cons 4 nil) 等价于 (list 1 2 3 4)
+   #+BEGIN_SRC scheme
+     ;;获取列表的第 n 项元素
+     (define (list-ref items n)
+        (if (= n 0)
+            (car items)
+            (list-ref (cdr items) (- n 1))))
+     ;;append list1 list2
+     ;;(cons 1 (cons 2 (cons 3 nil)))    (cons 5 (cons 6 nil))
+     ;;(cons 1 (cons 2 (cons 3 (cons 5 (cons 6 nil)))))
+     (define (my-append list1 list2)
+        (if (null? list1)
+            list2
+            (cons (car list1) (my-append (cdr list1) list2))))
+   #+END_SRC
+    + *练习 2.17*
+   #+BEGIN_SRC scheme
+     ;;(last-pair (list 1 2 3 4))
+     ;;(4)
+     (define (last-pair items)
+       (let ((tail (cdr items)))
+        (if (null? tail)
+            items
+            (last-pair tail))))
+   #+END_SRC
+    + *练习 2.18*
+   #+BEGIN_SRC scheme
+     ;;(reverse (list 1 2 3 4))
+     ;;(4 3 2 1)
+     ;;不正确版本, 输出  ((((4) . 3) . 2) . 1)
+     ;;(cons (cons (cons (cons 4 ) 3 ) 2 ) 1 )
+     ;;应该是 (cons 4 (cons 3 (cons 2 (cons 1))))
+     (define (my-reverse items)
+       (let ((tail (cdr items)))
+        (if (null? tail)
+            items
+            (cons (my-reverse tail) (car items)))))
+     (define (my-reverse items)
+       (define (iter-rev subitems answer)
+          (if (null? subitems)
+              answer
+              (iter-rev (cdr subitems) (cons (car subitems) answer))))
+       (iter-rev items nil))
+   #+END_SRC
+    + *练习 2.20*
+   #+BEGIN_SRC scheme
+     ;;(same-pair (list 1 2 3 4))
+     ;;(1 3)
+     (define nil '())
+     (define (same-pair a . b)
+      (let ((gcda (gcd a 2))
+            (ab (cons a b)))
+        (define (iter-same-pair items answer)
+          (if (null? items)
+            answer
+            (if (even? (+ gcda (car items)))
+                (iter-same-pair (cdr items) (cons (car items) answer))
+                (iter-same-pair (cdr items) answer))))
+       (my-reverse (iter-same-pair ab '()))))
+
+       (define (iter-same-p answer items)
+        (if (null? items)
+            answer
+            (let ((b0 (car items)))
+               (if (= (gcd a 2) (gcd b0 2))
+                   (iter-same-p (cons answer b0) (cdr items))
+                   (iter-same-p answer (cdr items))))))
+       (iter-same-p a b)
+
+       (define (test a . b)
+          (display a)
+          (newline)
+          (display b)
+          (newline))
+   #+END_SRC
+** 符号数据
+
+** 抽象数据的多重表示
+
+** 带有通用型操作的系统
