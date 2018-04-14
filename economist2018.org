@@ -24,9 +24,11 @@ legislators have grasped the need for radical change.
 Start with Facebook. Mr Zuckerberg told Congress that any firm that has 
 grown at the speed of Facebook was bound to make mistakes. But the 
 dorm-room excuse is wearing thin. Facebook is the sixth-most-valuable 
-listed firm on the planet. It spent $11.5m on lobbying in Washington in 2017. Its endless guff about “community” counts for little when it has 
+listed firm on the planet. It spent $11.5m on lobbying in Washington in 2017. 
+Its endless guff about “community” counts for little when it has 
 repeatedly and flagrantly disregarded its users’ rights to control their 
-own data. The company has carried out lots of fiddles in recent weeks—from making privacy settings clearer to promising an audit of suspicious apps. 
+own data. The company has carried out lots of fiddles in recent weeks—from 
+making privacy settings clearer to promising an audit of suspicious apps. 
 But it should go much further.
 
 An internal investigation into how third-party apps have been using 
@@ -35,7 +37,8 @@ outside firm to conduct a full independent examination of its own conduct.
 That would help address lingering questions; Cambridge Analytica may be 
 just one of many such outfits to have got hold of user data, for example. 
 The appointment of an independent chairman would be another way to improve 
-the quality of debate and scrutiny within Facebook. Along with other tech firms, it should create an industry ombudsman whose jobs would include 
+the quality of debate and scrutiny within Facebook. Along with other tech 
+firms, it should create an industry ombudsman whose jobs would include 
 making access to platforms easier for independent researchers. Instead of 
 opening up, however, the risk is that Facebook will throw up walls: its 
 decision to kick third-party data-brokers off the platform has the 
