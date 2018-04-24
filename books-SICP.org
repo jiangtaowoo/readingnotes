@@ -278,35 +278,434 @@
    #+BEGIN_SRC scheme
      ;;(same-pair (list 1 2 3 4))
      ;;(1 3)
-     (define nil '())
      (define (same-pair a . b)
       (let ((gcda (gcd a 2))
             (ab (cons a b)))
         (define (iter-same-pair items answer)
           (if (null? items)
             answer
-            (if (even? (+ gcda (car items)))
+            (if (= gcda (gcd (car items) 2))
                 (iter-same-pair (cdr items) (cons (car items) answer))
                 (iter-same-pair (cdr items) answer))))
        (my-reverse (iter-same-pair ab '()))))
+   #+END_SRC
+   
+    + *练习 2.21*
+   #+BEGIN_SRC scheme
+     (define nil '())
+     ;;map
+     (define (map proc items)
+       (if (null? items)
+         nil
+         (cons (proc (car items)) 
+               (map proc (cdr items)))))
 
-       (define (iter-same-p answer items)
-        (if (null? items)
-            answer
-            (let ((b0 (car items)))
-               (if (= (gcd a 2) (gcd b0 2))
-                   (iter-same-p (cons answer b0) (cdr items))
-                   (iter-same-p answer (cdr items))))))
-       (iter-same-p a b)
+     (define (square-list items)
+       (if (null? items)
+         nil
+         (cons (* (car items) (car items))
+               (square-list (cdr items)))))
 
-       (define (test a . b)
-          (display a)
-          (newline)
-          (display b)
-          (newline))
+     (define (square-list items)
+        (map (lambda (x) (* x x)) items))
+   #+END_SRC
+
+    + *练习 2.23*
+   #+BEGIN_SRC scheme
+     (define nil '())
+     ;;map
+     (define (for-each proc items)
+       (cond ((null? items)
+         nil)
+         (else
+           (proc (car items))
+           (for-each proc (cdr items)))))
+
+   #+END_SRC
+   
+*** 层次性结构
+    + *练习 2.27*
+   #+BEGIN_SRC scheme
+     ;;(deep-reverse (list (list 1 2) (list 3 4)))
+     ;;((4 3) (2 1))
+     (define (deep-reverse items)
+        (cond ((null? items) nil)
+              ((not (pair? items)) items)
+              (else 
+                (append (deep-reverse (cdr items)) 
+                        (list (deep-reverse (car items)))))))
+   #+END_SRC
+    + *练习 2.28*
+   #+BEGIN_SRC scheme
+     ;;(fringe (list (list 1 2) (list 3 4)))
+     ;;(1 2 3 4)
+     (define (fringe items)
+        (cond ((null? items) nil)
+              ((not (pair? items)) (list items))
+              (else 
+                (append (fringe (car items)) 
+                        (fringe (cdr items))))))
+   #+END_SRC
+    + *练习 2.29*
+   #+BEGIN_SRC scheme
+     ;;二叉活动体
+     (define (make-mobile left right)
+       (list left right))
+     (define (make-branch length structure)
+       (list length structure))
+     (define (left-branch m)
+       (car m))
+     (define (right-branch m)
+       (car (cdr m)))
+     (define (branch-length b)
+       (car b))
+     (define (branch-structure b)
+       (car (cdr b)))
+     ;;计算 weight
+     (define (branch-end? b)
+       (not (pair? (branch-structure b))))
+     (define (branch-weight b)
+       (define (iter-branch-weight b acc)
+         (let ((bs (branch-structure b)))
+         (if (branch-end? b)
+           (+ acc bs)
+           (+ acc 
+               (iter-branch-weight (left-branch bs) 0)
+               (iter-branch-weight (right-branch bs) 0)))))
+         (iter-branch-weight b 0))
+     (define (total-weight m)
+       (+ (branch-weight (left-branch m)) (branch-weight (right-branch m))))
+      ;;活动体平衡判断
+     (define (branch-wl b)
+       (* (branch-length b) (branch-weight b)))
+     (define (mobile-balance? m)
+         (let (
+                (lb (left-branch m))
+                (rb (right-branch m))
+                (curacc (= 
+                          (branch-wl (left-branch m)) 
+                          (branch-wl (right-branch m)))))
+              (and curacc
+                   (if (branch-end? lb)
+                       #t
+                       (mobile-balance? (branch-structure lb)))
+                   (if (branch-end? rb)
+                       #t
+                       (mobile-balance? (branch-structure rb))))))
+   #+END_SRC
+
+*** 序列作为一种约定的界面
+    将程序表示为一些针对序列的操作，帮助我们得到模块化的程序设计
+    + *练习 2.33*
+    使用 accumulate 重新定义 map, append, length
+   #+BEGIN_SRC scheme
+     (define (accumulate op initial sequence)
+       (if (null? sequence)
+           initial
+           (op (car sequence)
+               (accumulate op initial (cdr sequence)))))
+     (define (map p sequence)
+       (accumulate (lambda (x y) (cons (p x) y)) nil sequence))
+     (define (append seq1 seq2)
+       (accumulate cons seq2 seq1))
+     (define (length seq)
+       (accumulate (lambda (x y) (+ 1 y)) 0 seq))
+   #+END_SRC
+    + *练习 2.34*
+   #+BEGIN_SRC scheme
+     (define (horner-eval x coeff-seq)
+       (accumulate (lambda (this-coeff higher-terms) 
+                           (+ this-coeff (* x higher-terms)))
+                   0 
+                   coeff-seq))
+   #+END_SRC
+    + *练习 2.35*
+   #+BEGIN_SRC scheme
+     (define (count-leaves t)
+       (accumulate (lambda (left right) 
+                           (+ 1 right))
+                   0 
+                   (map + (fringe t))))
+   #+END_SRC
+    + *练习 2.36*
+   #+BEGIN_SRC scheme
+     (define (accumulate-n op init seqs)
+       (if (null? (car seqs))
+           nil
+           (cons (accumulate op init 
+                             (accumulate 
+                                (lambda (x y) (cons (car x) y)) nil seqs))
+                 (accumulate-n op init 
+                             (accumulate 
+                                (lambda (x y) (cons (cdr x) y)) nil seqs)))))
+   #+END_SRC
+    + *练习 2.38*
+   #+BEGIN_SRC scheme
+     (define fold-right accumulate)
+     (define (fold-left op init seqs)
+       (define (iter result rest)
+         (if (null? rest)
+             result
+             (iter (op result (car rest))
+                   (cdr rest))))
+       (iter init seqs))
+     ;;reverse 定义
+     (define (reverse seqs)
+       (fold-right (lambda (x rest) (append rest (list x)))
+                   nil seqs))
+     (define (reverse seqs)
+       (fold-left (lambda (rest x) (append (list x) rest))
+                   nil seqs))
+     (define (reverse seqs)
+       (fold-left (lambda (rest x) (cons x rest))
+                   nil seqs))
+   #+END_SRC
+
+*** 嵌套映射
+   #+BEGIN_SRC scheme
+     (define (flatmap proc seq)
+       (accumulate append nil (map proc seq)))
+     (define (make-range start end)
+       (define (iter-make-range start end acc)
+         (if (> start end)
+             acc
+             (iter-make-range (+ start 1) end (append acc (list start)))))
+       (iter-make-range start end nil))
+     (define (make-range start end)
+        (if (> start end)
+            nil
+            (cons start (make-range (+ start 1) end))))
+           
+   #+END_SRC
+    + *练习 2.40*
+   #+BEGIN_SRC scheme
+     (define (unique-pairs n)
+       (flatmap (lambda (i)
+                  (map (lambda (j) (list j i))
+                       (make-range 1 (- i 1))))
+                (make-range 1 n)))
+     (define (prime-sum? pair)
+       (prime? (+ (car pair) (cadr pair))))
+     (define (prime? x)
+       (define (iter-prime? x n acc)
+         (if (> (* n n) x)
+             acc
+             (iter-prime? x (+ n 1) (and acc (= 1 (gcd x n))))))
+       (iter-prime? x 2 #t))
+     (define (make-pair-sum pair)
+       (list (car pair) (cadr pair) (+ (car pair) (cadr pair))))
+     (define (prime-sum-pairs n)
+       (map make-pair-sum (filter prime-sum? (unique-pairs n))))
+   #+END_SRC
+    + *练习 2.41*
+   #+BEGIN_SRC scheme
+     (define (unique-tripes n)
+       (flatmap (lambda (i)
+                  (flatmap (lambda (j) 
+                             (map (lambda (k) 
+                                    (list k j i))
+                                  (make-range 1 (- j 1))))
+                           (make-range 1 (- i 1))))
+                (make-range 1 n)))
+     (define (tripe-sum n s)
+       (filter (lambda (x) (= s (+ (car x) (cadr x) (caddr x))))
+               (unique-tripes n)))
+   #+END_SRC
+    + *练习 2.42*
+   #+BEGIN_SRC scheme
+     (define empty-board '())
+     ;;((r,c1),(r,c2),....)
+     (define (adjoin-position new-row k rest-of-queens)
+        (append rest-of-queens (list (list new-row k))))
+     ;;position conflict
+     (define (position-conflict? pos1 pos2)
+       (let (
+             (row1 (car pos1))
+             (col1 (cadr pos1))
+             (row2 (car pos2))
+             (col2 (cadr pos2)))
+         (and (not (= row1 row2)) 
+              (not (= (- row1 col1) (- row2 col2)))
+              (not (= (+ row1 col1) (+ row2 col2))))))
+     ;;is safe position or not
+     (define (safe? k positions)
+       (let ((k-pos (car (reverse positions))))
+         (define (iter-safe k positions col-check result)
+           (if (and (> k 1) (< col-check k))
+               (let ((rest-positions (cdr positions))
+                     (cur-result (and result 
+                                      (position-conflict? k-pos (car positions)))))
+                    (iter-safe k rest-positions (+ 1 col-check) cur-result))
+               result))
+         (iter-safe k positions 1 #t)))
+     ;;八皇后问题
+     (define (queens board-size)
+       (define (queen-cols k)
+         (if (= k 0)
+             (list empty-board)
+             (filter
+                (lambda (positions)
+                        (safe? k positions))
+                (flatmap
+                   (lambda (rest-of-queens)
+                      (map (lambda (new-row)
+                              (adjoin-position new-row k rest-of-queens))
+                           (make-range 1 board-size)))
+                   (queen-cols (- k 1))))))
+       (queen-cols board-size))
    #+END_SRC
 ** 符号数据
-
+*** 引号
+   #+BEGIN_SRC scheme
+     (define (memq item x)
+       (cond ((null? x) #f)
+             ((eq? item (car x)) x)
+             (else (memq item (cdr x)))))
+   #+END_SRC
+    + *练习 2.54*
+   #+BEGIN_SRC scheme
+     (define (equalx? a b)
+       (cond ((and (not (pair? a)) (not (pair? b))) (eq? a b))
+             ((and (pair? a) (pair? b))
+              (and (equalx? (car a) (car b)) (equalx? (cdr a) (cdr b))))
+             (else #f)))
+   #+END_SRC
+*** 实例: 符号求导
+    + *练习 2.56*
+   #+BEGIN_SRC scheme
+     (define (variable? x) (symbol? x))
+     (define (same-variable? v1 v2)
+       (and (variable? v1) (variable? v2) (eq? v1 v2)))
+     (define (=number? exp num)
+       (and (number? exp) (= exp num)))
+     (define (make-sum a1 a2)
+       (cond ((=number? a1 0) a2)
+             ((=number? a2 0) a1)
+             ((and (number? a1) (number? a2)) (+ a1 a2))
+             (else (list '+ a1 a2))))
+     ;;加法支持多个参数
+     (define (make-sum . listx)
+       (define (iter-make-sum acc items)
+         (cond ((null? items) acc)
+               ((number? (car items))
+                (iter-make-sum (cons (+ (car acc) (car items)) (cdr acc))
+                               (cdr items)))
+               (else
+                (iter-make-sum (append acc (list (car items))) 
+                               (cdr items)))))
+       (let ((result (iter-make-sum (list 0) listx)))
+            (if (null? (cdr result))
+                (car result)
+                (if (= (car result) 0)
+                    (if (null? (cddr result))
+                        (cadr result)
+                        (cons '+ (cdr result)))
+                    (cons '+ result)))))
+     (define (make-product m1 m2)
+       (cond ((or (=number? m1 0) (=number? m2 0)) 0)
+             ((=number? m1 1) m2)
+             ((=number? m2 1) m1)
+             ((and (number? m1) (number? m2)) (* m1 m2))
+             (else (list '* m1 m2))))
+     ;;乘法支持多个参数
+     (define (make-product . listx)
+       (define (iter-make-prod acc items)
+         (cond ((null? items) acc)
+               ((number? (car items))
+                (iter-make-prod (cons (* (car acc) (car items)) (cdr acc))
+                               (cdr items)))
+               (else
+                (iter-make-prod (append acc (list (car items))) 
+                               (cdr items)))))
+       (let ((result (iter-make-prod (list 1) listx)))
+            (if (null? (cdr result))
+                (car result)
+                (cond ((= (car result) 1) 
+                       (if (null? (cddr result))
+                           (cadr result)
+                           (cons '* (cdr result))))
+                      ((= (car result) 0) 0)
+                      (else 
+                        (cons '* result))))))
+     (define (sum? x)
+       (and (pair? x) (eq? (car x) '+)))
+     (define (addend s) (cadr s))
+     (define (augend s) (caddr s))
+     ;;加法支持多个参数
+     (define (augend s) 
+       (if (null? (cdr (cddr s))) 
+           (caddr s)
+           (cons '+ (cddr s))))
+     (define (product? x)
+       (and (pair? x) (eq? (car x) '*)))
+     (define (multiplier p) (cadr p))
+     (define (multiplicand p) (caddr p))
+     ;;乘法支持多个参数
+     (define (multiplicand p) 
+       (if (null? (cdr (cddr p))) 
+           (caddr p)
+           (cons '* (cddr p))))
+     (define (exponentiation? x)
+       (and (pair? x) (eq? (car x) '**)))
+     (define (base x) (cadr x))
+     (define (exponent x) (caddr x))
+     (define (calc-exp b e)
+       (if (< e 0)
+        (/ 1 (calc-exp b (- e)))
+        (cond ((= e 0) 1)
+              ((= e 1) b)
+              (else (* b (calc-exp b (- e 1)))))))
+     (define (make-exponentiation b e)
+       (cond ((=number? e 0) 1)
+             ((=number? e 1) b)
+             ((=number? b 1) 1)
+             ((and (number? b) (number? e)) (calc-exp b e))
+             (else (list '** b e))))
+     ;;符号求导
+     (define (deriv exp var)
+       (cond ((number? exp) 0)
+             ((variable? exp)
+              (if (same-variable? exp var) 1 0))
+             ((sum? exp)
+              (make-sum (deriv (addend exp) var)
+                        (deriv (augend exp) var)))
+             ((product? exp)
+              (make-sum (make-product (multiplier exp) 
+                                      (deriv (multiplicand exp) var))
+                        (make-product (multiplicand exp)
+                                      (deriv (multiplier exp) var))))
+             ((exponentiation? exp)
+              (make-product (exponent exp) 
+                            (make-exponentiation (base exp) 
+                                                 (make-sum (exponent exp) (- 1))) 
+                            (deriv (base exp) var)))
+             (else
+               (error "unknown expression type -- DERIV" exp))))
+     ;;符号求导(不支持乘法多参数)
+     (define (deriv exp var)
+       (cond ((number? exp) 0)
+             ((variable? exp)
+              (if (same-variable? exp var) 1 0))
+             ((sum? exp)
+              (make-sum (deriv (addend exp) var)
+                        (deriv (augend exp) var)))
+             ((product? exp)
+              (make-sum (make-product (multiplier exp) 
+                                      (deriv (multiplicand exp) var))
+                        (make-product (multiplicand exp)
+                                      (deriv (multiplier exp) var))))
+             ((exponentiation? exp)
+              (make-product (exponent exp) 
+                            (make-product (make-exponentiation 
+                                            (base exp) 
+                                            (make-sum (exponent exp) (- 1))) 
+                                          (deriv (base exp) var))))
+             (else
+               (error "unknown expression type -- DERIV" exp))))
+   #+END_SRC
+*** 实例: 集合的表示
+   #+BEGIN_SRC scheme
+   #+END_SRC
 ** 抽象数据的多重表示
 
 ** 带有通用型操作的系统

@@ -86,3 +86,531 @@
       4. 转至 2, 直至训练集中没有误分类点
       对偶形式中训练实例仅以内积的形式出现. 为了方便, 可以预先将训练集中实例间的内积计算出来并以矩阵的形式存储, 这个矩阵就是所谓的 Gram 矩阵。
       $$G = \left[ x_{i} \cdot x_{j} \right ]_{N \times N} $$
+** 感知机算法实现(python)
+#+BEGIN_SRC python
+  #vector.py
+  # -*- coding: utf-8 -*-
+  import math
+
+  """
+  k 维欧式空间向量, 支持以下基本操作
+  1. 获取向量的第 i 维
+  2. 两个向量距离的计算 Lp
+  3. 向量点积计算
+  4. 向量*标量计算
+  5. 向量相加运算
+  """
+  class Vector(object):
+      def __init__(self, *tup):
+          #k 是向量维度
+          if tup:
+              self._v = tup
+          #self._v = [0.0]*k
+
+      def __getitem__(self, key):
+          #获取向量某一维
+          if isinstance(key, int):
+              return self._v[key]
+
+      def zero(self):
+          return Vector(*tuple([0.0]*len(self._v)))
+
+      def dimension(self):
+          #获取向量的维度
+          return len(self._v)
+
+      #向量点积, 结果为标量
+      def dotmult(self, x):
+          dim = self.dimension()
+          if isinstance(x, Vector) and x.dimension()==dim:
+              return sum(map(lambda t: t[0]*t[1] ,zip(self._v, x._v)))
+          return None
+
+      #乘以标量 k, 结果为向量
+      def scalarmult(self, k):
+          v = Vector(*tuple(map(lambda x: x*k, self._v)))
+          return v
+
+      #两个向量相加, 结果为向量
+      def __add__(self, x):
+          dim = self.dimension()
+          if isinstance(x, Vector) and x.dimension()==dim:
+              v = Vector(*tuple(map(lambda t: t[0]+t[1] ,zip(self._v, x._v))))
+              return v
+
+      #k 维向量的距离
+      def distance(self, x, p=2):
+          dim = self.dimension()
+          if isinstance(x, Vector) and x.dimension()==dim:
+              p_ = sum(map(lambda t: math.pow(abs(t[0]-t[1]),p) ,zip(self._v, x._v)))
+              return math.pow(p_, 1.0/p)
+          return None
+
+      #向量到超平面的距离, 超平面由 维度=取值 确定
+      def distance_hyperect(self, dim, val, p=2):
+          if dim<self.dimension():
+              p_ = math.pow(abs(val-self._v[dim]),p)
+              return math.pow(p_, 1.0/p)
+          return None
+
+      def prettify(self, precise=None):
+          if precise:
+              s = "{:.%df}" % (precise)
+              return tuple(map(lambda x: float(s.format(x)), self._v))
+          return self._v
+
+  #perceptron.py
+  # -*- coding: utf-8 -*-
+  from vector import Vector
+
+  #感知机算法 1
+  def perceptron_1(T, eta):
+      def p_init(data):
+          (X, y) = data
+          return (X.zero(), 0)
+      def p_loss(data, W, b):
+          (X, y) = data
+          return y*(W.dotmult(X) + b)
+      def p_update(data, W, b, eta):
+          (X, y) = data
+          return (W+X.scalarmult(eta*y), b+eta*y)
+      def p_print(data, W, b):
+          (X, y) = data
+          print 'W=', W.prettify(), 'b=', b, '\t[', X.prettify(), y, '] PASS' if p_loss(data, W, b)>0 else '] LOSS'
+      roundx = 0
+      misscnt = len(T)
+      #step1. 初始化 w0, b0
+      (W, b) = p_init(T[0])
+      while misscnt:
+          misscnt = 0
+          roundx += 1
+          #step2. 随机选取一个(xi, yi)
+          for data in T:
+              p_print(data, W, b)
+              #step3. 如果 yi*(w.xi + b) <=0, 更新参数
+              if p_loss(data, W, b)<=0:
+                  misscnt += 1
+                  (W, b) = p_update(data, W, b, eta)
+          print '----ROUND %d:\tMISS=%d----\n' % (roundx, misscnt)
+      return (W, b)
+
+  #感知机算法 2
+  def perceptron_2(T, eta):
+      def Gmatrix(T):
+          X = [data[0] for data in T]
+          G = []
+          for Xi in X:
+              gi = []
+              G.append(gi)
+              for Xj in X:
+                  gi.append( Xi.dotmult(Xj) )
+          return G
+      def p_loss(T, G, i, alpha, b):
+          cdata = T[i]
+          s = 0
+          for j, data in enumerate(T):
+              (X, y) = data
+              s += alpha[j]*y*G[j][i]
+          s += b
+          return cdata[1]*s
+      def p_update(data, i, alpha, b, eta):
+          (X, y) = data
+          alpha[i] = alpha[i] + eta
+          b = b + eta*y
+          return b
+      def p_print(T, G, i, alpha, b):
+          (X, y) = T[i]
+          print 'alpha=', alpha, 'b=', b, '\t[', X.prettify(), y, '] PASS' if p_loss(T, G, i, alpha, b)>0 else '] LOSS'
+      def p_calcw(T, alpha):
+          W = T[0][0].zero()
+          for i, data in enumerate(T):
+              (X, yi) = data
+              W = W + X.scalarmult(alpha[i]*yi)
+          return W
+      roundx = 0
+      misscnt = len(T)
+      G = Gmatrix(T)
+      #step1. 初始化 w0, b0
+      (alpha, b) = ([0]*misscnt, 0)
+      while misscnt:
+          misscnt = 0
+          roundx += 1
+          #step2. 随机选取一个(xi, yi)
+          for i, data in enumerate(T):
+              p_print(T, G, i, alpha, b)
+              #step3. 如果 yi*(SUM(alhpaj*yj*xj).xi + b) <=0, 更新参数
+              if p_loss(T, G, i, alpha, b)<=0:
+                  misscnt += 1
+                  b = p_update(data, i, alpha, b, eta)
+          print '----ROUND %d:\tMISS=%d----\n' % (roundx, misscnt)
+      return (p_calcw(T, alpha), b)
+
+  if __name__=="__main__":
+      T = [(Vector(0.2,0.1),1),(Vector(0.4,0.6),1),
+          (Vector(0.5,0.2),1),(Vector(0.7,0.9),-1)]
+      #算法 1
+      (W, b) = perceptron_1(T, 1)
+      print W.prettify(4), b
+      print '*************************************************************'
+      #算法 2
+      (W, b) = perceptron_2(T, 1)
+      print W.prettify(4), b
+#+END_SRC
+* Chapter3 k 近邻法
+** 概念及定义
+   k-NN 是一种基本分类与回归方法.
+   k 值选择、距离度量、分类决策规则是 k 近邻法的三个基本要素。
+
+** k 近邻算法
+   给定一个训练数据集，对新的输入实例，在训练数据集中找到与该实例最邻近的 k 个实例，这 k 个实例的多数属于某个类，就把该输入实例分为这个类。
+   + *算法 3.1* (k 近邻法)
+     输入: 训练数据集
+     $$ T = \{(x_{1},y_{1}),(x_{2},y_{2}),...,(x_{N},y_{N})\} $$
+     其中, \( x_{i} \in X \subseteq R^{n} \) 为实例的特征向量，\( y_{i} \in Y = \{c_{1},c_{2},...,c_{k}\} \) \\
+     为实例的类别, i=1,2,...N; 实例特征向量 x;\\
+     输出: 实例 x 所属的类 y.
+     1) 根据给定的距离度量, 在训练集 T 中找出与 x 最邻近的 k 个点, 涵盖这 k 个点\\
+        的 x 邻域记作 \(N_{k}(x)\);
+     2) 在 \(N_{k}(x)\) 中根据分类决策规则(如多数表决)决定 x 的类别 y:
+     $$ y = \displaystyle argmax_{c_{j}} \displaystyle \sum_{x_{i} \in N_{k}(x)} I(y_{i}=c_{j}), i=1,2,...,N; j=1,2,...,K \eqno{(3.1)} $$
+     I 为指示函数(相等时取值 1, 否则取值 0)
+
+** k 近邻模型
+*** 模型
+     1) 距离训练实例点 \(x_{i}\)比其他点更近的所有点组成一个区域(cell)
+     2) 将 \(y_{i}\) 作为其单元(cell)中所有点的类标记(class label).
+*** 距离度量
+     特征空间中两个实例点的距离由两个点相似程度反映.
+     X 是 n 维实数向量空间 \(R^{n}, x_{i},x_{j} \in X, x_{i} = (x_{i}^{(1)},x_{i}^{(2)},...,x_{i}^{(n)})^{T}, \) 
+     \( x_{j} = (x_{j}^{(1)},x_{j}^{(2)},...,x_{j}^{(n)})^{T}, x_{i}, x_{j}\)的 \(L_{p}\)距离定义为
+     $$ L_{p}(x_{i},x_{j}) = \left(\displaystyle \sum_{l=1}^{n} |x_{i}^{(l)}-x_{j}^{(l)}|^{p} \right)^{\frac{1}{p}} $$
+     这里 \( p \geq 1.\) 当 p=2 时, 称为欧氏距离, p=1 时, 称为曼哈顿距离
+*** k 值的选择
+     选择小 k 值, 相当于在较小的邻域中的训练实例进行预测, "学习"近似误差减小, "学习"的估计误差会增大\\
+     选择较大 k 值, "学习"近似误差增大(不相似实例也对预测起作用), 但是估计误差会减小\\
+     k 值增大意味着模型变得简单
+*** 分类决策规则
+     采用 0-1 损失函数, 分类函数为
+     $$ f: R^{n} \longrightarrow \{c_{1},c_{2},...,c_{k}\} $$
+     那么误分类的概率是
+     $$ P(Y \neq f(X)) = 1 - P(Y=f(X)) $$
+     $$ \frac{1}{k} \displaystyle \sum_{x_{i} \in N_{k}(x)} I(y_{i} \neq c_{j}) = 1 - \frac{1}{k} \displaystyle \sum_{x_{i} \in N_{k}(x)} I(y_{i} = c_{j}) $$
+     因此多数表决规则等价于经验风险最小化
+** k 近邻算法的实现: kd 树
+     主要考虑如何对训练数据进行快速 k 近邻搜索
+*** 构造 kd 树
+     采用二叉树, 表示对 k 维空间的一个划分。构造根节点，使根节点对应于 k 维空间中包含所有实例点的超矩形区域。递归对 k 维空间进行切分，生成子节点。
+     + 平衡 kd 树
+     *输入* : k 维空间数据集 \( T = \{ x_{1}, x_{2},...,x_{N}\},\) 其中 \(x_{i} = (x_{i}^{(1)},x_{i}^{(2)},...,x_{i}^{(k)})^{T}, i=1,2,...,N;\)\\
+     *输出* : kd 树
+       1) 开始: 构造根节点, 对应于包含 T 的 k 维空间超矩形区域.\\
+          选择 \(x^{(1)}\) 为坐标轴, 以 T 中所有实例的 \(x^{(1)}\) 坐标的中位数为切分点,\\
+          将根节点对应的超矩形区域切分为两个子区域. 切分由通过切分点并与坐标轴 \(x^{(1)}\)垂直的\\
+          超平面实现.\\
+          由根节点生成深度为 1 的左右子节点: 左子节点对应坐标 \(x^{(1)}\) 小于切分点的子区域, \\
+          右子节点对应坐标大于切分点的子区域.\\
+          将落在切分超平面上的实例点保存在根节点.
+       2) 重复: 对深度为 j 的节点, 选择\(x^{(l)}\) 为切分的坐标轴, l = j mod k + 1,\\
+          以该节点的区域中所有实例的\(x^{(l)}\)坐标的中位数为切分点, 将该节点对应的超平面\\
+          矩形区域且分为两个子区域.\\
+          由该节点生成深度为 j+1 的左右子节点.
+       3) 直到两个子区域没有实例存在时停止. 从而形成 kd 树的区域划分.
+*** 搜索 kd 树
+     + 用 kd 树的最近邻搜索
+     *输入* : kd 树, 目标点 x
+     *输出* : x 的最近邻
+       1) 在 kd 树找出包含目标点 x 的叶节点.\\
+          从根节点触发, 递归向下访问 kd 树. 若目标点 x 当前维坐标小于切分点坐标,左移,否则右移, 直到子节点为叶节点为止.
+       2) 以此叶节点为 "当前最近点"
+       3) 递归地向上回退, 在每个节点进行以下操作:
+          1. 如果该节点保存的实例比当前最近点离目标更近, 更新当前最近点
+          2. 当前最近点一定存在于该节点一个子节点对应的区域. 检查该另一子节点对应区域是否有更近点.具体地, 检查另一子节点对应的区域是否与以目标为球心, 以目标点与"当前最近点"间的距离为半径的超球体相交.\\
+             如果相交, 可能在另一个子节点对应的区域内存在距目标点更近的点, 移动到另一个子节点. 接着, 递归地进行最近邻搜索;\\
+             如果不相交, 向上回退.
+       4) 当回退到根节点时, 搜索结束. 最后的"当前最近点"即为 x 的最近邻点.
+** k 近邻算法实现(python)
+#+BEGIN_SRC python
+    #kdtree.py
+    # -*- coding: utf-8 -*-
+    import math
+    from vector import Vector
+  
+  
+    #根据中位数, 切分数据
+    def split_by_mid(nodes, key):
+        l = sorted(nodes, key=key)
+        i = int(math.ceil((len(l)+1.0)/2)-1)
+        tl = l[:i]
+        v0 = l[i]
+        tr = l[(i+1):]
+        return v0, tl, tr
+  
+    #构造 kd 树
+    def kd_tree_build(parent, T, vecdim, depth):
+        #tree = [node, cur-dimension, parent, left, right]
+        l = depth % vecdim
+        (v0, tl, tr) = split_by_mid(T, key=lambda data: data[l])
+        node = [v0, l, parent, None, None]
+        left = kd_tree_build(node, tl, vecdim, depth+1) if tl else None
+        right = kd_tree_build(node, tr, vecdim, depth+1) if tr else None
+        node[3] = left
+        node[4] = right
+        return node
+  
+    def kd_tree_search(tree, x):
+        (vec, l, parent, left, right) = tree
+        if left is None and right is None:
+            return tree
+        if x[l]<vec[l]:
+            if left:
+                return kd_tree_search(left, x)
+            return tree
+        if x[l]>=vec[l]:
+            if right:
+                return kd_tree_search(right, x)
+            return tree
+  
+    def kd_tree_nearest(tree, kzones, x):
+        backtraced = []
+        distraced = []
+        nearest = [None, None]
+        kdsearch = True
+        zones = map(lambda x: x[0], kzones)
+        def backtrace(treenode):
+            if treenode not in backtraced:
+                backtraced.append(treenode)
+                distraced.append(nearest[1])
+        def updatenearest(node):
+            if node not in zones:
+                dis = x.distance(node[0])
+                (vec, ndis) = nearest
+                if not ndis or dis<ndis:
+                    nearest[0] = node
+                    nearest[1] = dis
+        while kdsearch or current:
+            #step1. 从 tree 出发, 找到 x 的最近邻点
+            if kdsearch:
+                current = kd_tree_search(tree, x)
+                updatenearest(current)
+                backtrace(current)
+                kdsearch = False
+            #step2. 回溯
+            (nodev, l, parent, left, right) = current
+            other = None
+            if parent:
+                other = parent[3] if parent[4] is current else parent[4]
+            #1.父节点: 分割点本身的距离判断
+            if parent and parent not in backtraced:
+                updatenearest(parent)
+                backtrace(parent)
+            #2.相邻子节点的距离判断
+            if other and other not in backtraced:
+                ov, ol = other[0], other[1]
+                hyperdis = x.distance_hyperect(ol, ov[ol])
+                if hyperdis<nearest[1]:
+                    #分割超平面与当前最近邻超球体相交
+                    tree = other
+                    kdsearch = True
+                else:
+                    current = other[2]
+            else:
+                #向上回退
+                current = parent
+        print_search_trace(backtraced, distraced)
+        kzones.append(nearest)
+        return nearest
+  
+    def knn(tree, k, x):
+        kzones = []
+        for i in xrange(0,k):
+            kd_tree_nearest(tree, kzones, x)
+        return kzones
+  
+    def print_search_trace(backtraced, distraced):
+        for idx, node in enumerate(backtraced):
+            kd_node_prettify(node, distraced[idx], '%d:\t' % (idx))
+  
+    def kd_node_prettify(node, mindis, tips):
+        #(vector, l, parent, left, right)
+        if node:
+            print tips, node[0].prettify(), " split=", node[1], "mindis=", mindis
+  
+  
+    T = [Vector(2,3),Vector(5,4),
+         Vector(9,6),Vector(4,7),
+         Vector(8,1),Vector(7,2)]
+  
+    tree = kd_tree_build(None,T,2,0)
+    k = 1
+  
+    x = Vector(3,4.5)
+    kzones = knn(tree, k, x)
+    #node, dis = kd_tree_nearest(tree, x)
+    print "-----------------------------------"
+    for (node, dis) in kzones:
+        print x.prettify(), node[0].prettify(), dis
+    print "\n***********************************\n"
+  
+    x = Vector(2,6)
+    kzones = knn(tree, k, x)
+    #node, dis = kd_tree_nearest(tree, x)
+    print "-----------------------------------"
+    for (node, dis) in kzones:
+        print x.prettify(), node[0].prettify(), dis
+    print "\n***********************************\n"
+  
+    x = Vector(8.5,3)
+    kzones = knn(tree, k, x)
+    #node, dis = kd_tree_nearest(tree, x)
+    print "-----------------------------------"
+    for (node, dis) in kzones:
+        print x.prettify(), node[0].prettify(), dis
+
+#+END_SRC
+
+#+RESULTS:
+* Chapter4 朴素贝叶斯法
+** 朴素贝叶斯法的学习与分类
+*** 基本方法
+    训练数据集
+    $$ T = \{(x_{1},y_{1}),(x_{2},y_{2}),...,(x_{N},y_{N})\} $$
+    由 P(X,Y)独立同分布产生.\\
+    朴素贝叶斯法通过训练数据集学习联合概率分布 P(X,Y). 具体地, 学习以下先验概率分布及条件概率分布.\\
+    先验概率分布
+    $$ P(Y=c_{k}), k=1,2,...,K  \eqno{(4.1)} $$
+    条件概率分布(基于条件独立假设)
+    $$ \begin{aligned} P(X=x|Y=c_{k}) & = P(X^{(1)}=x^{(1)},...,X^{(n)}=x^{(n)}|Y=c_{k}), k=1,2,...,K \\
+     & = \displaystyle \prod _{j=1}^{n} P(X^{(j)}=x^{(j)}|Y=c_{k}) \end{aligned} $$
+    由贝叶斯定理得到
+    $$ P(Y=c_{k}|X=x) = \frac {P(X=x|Y=c_{k})P(Y=c_{k})}{\sum _{k} P(X=x|Y=c_{k})P(Y=c_{k})} \eqno{(4.4)} $$
+    由分母对所有 \(c_{k}\) 相同得到
+    $$ y = f(x) = argmax _{c_{k}} P(Y=c_{k}) \displaystyle \prod _{j} P(X^{(j)}=x^{(j)} | Y=c_{k}) \eqno{(4.7)} $$
+** 朴素贝叶斯法的参数估计
+*** 极大似然估计
+    $$ P(Y=c_{k}) = \frac {\displaystyle \sum _{i=1}^{N}I(y_{i}=c_{k})}{N}, k=1,2,...,K \eqno{(4.8)} $$
+    设第 j 个特征 \(x^{(j)}\) 可能取值集合为 \(\{a_{j1},a_{j2},...,a_{jS_{j}} \}\), 条件概率 \( P(X^{(j)}=a_{jl}|Y=c_{k}) \)的极大似然估计是
+    $$ P(X^{(j)}=a_{jl}|Y=c_{k}) = \frac {\displaystyle \sum _{i=1}^{N}I(x_{i}^{(j)}=a_{jl}, y_{i}=c_{k})}{\displaystyle \sum _{i=1}^{N}I(y_{i}=c_{k})} $$
+    $$ j = 1,2,...,n; l=1,2,..., S_{j}; k=1,2,...,K \eqno{(4.9)} $$
+*** 学习与分类算法
+    + *算法 4.1* (朴素贝叶斯算法)
+      *输入*: 训练数据 \( T=\{(x_{1},y_{1}),(x_{2},y_{2}),...,(x_{N},y_{N}) \} \), 其中 \( x_{i}=(x_{i}^{(1)},x_{i}^{(2)},...,x_{i}^{(n)})^{T} \), 
+      \(x_{i}^{(j)} \) 是第 i 个样本的第 j 个特征, \( x_{i}^{(j)} \in \{ a_{j1},a_{j2},...,a_{jS_{j}} \} \), \( a_{jl} \)是第 j 个特征可能取的第 l 个值,
+      \( j=1,2,...,n, l=1,2,...,S_{j}, y_{i} \in \{ c_{1}, c_{2},...,c_{k}\} \); 实例 x;\\
+      *输出*: 实例 x 的分类\\
+        a) 计算先验概率及条件概率
+        $$ P(Y=c_{k}) = \frac {\displaystyle \sum _{i=1}^{N}I(y_{i}=c_{k})}{N}, k=1,2,...,K $$
+        $$ P(X^{(j)}=a_{jl}|Y=c_{k}) = \frac {\displaystyle \sum _{i=1}^{N}I(x_{i}^{(j)}=a_{jl}, y_{i}=c_{k})}{\displaystyle \sum _{i=1}^{N}I(y_{i}=c_{k})} $$
+        $$ j = 1,2,...,n; l=1,2,..., S_{j}; k=1,2,...,K $$
+        b) 对于给定的实例 \( x= (x^{(1)},x^{(2)},...,x^{(n)})^{T} \), 计算
+        $$ P(Y=c_{k}) \displaystyle \prod _{j=1}^{n} P(X^{(j)}=x^{(j)} | Y=c_{k}), k=1,2,...K $$
+        c) 确定实例 x 的类别
+        $$ y = argmax _{c_{k}} P(Y=c_{k}) \displaystyle \prod _{j=1}^{n} P(X^{(j)}=x^{(j)} | Y=c_{k}) $$
+*** 贝叶斯估计
+    条件概率的贝叶斯估计是
+    $$ P_{\lambda}(X^{(j)}=a_{jl}|Y=c_{k}) = \frac {\displaystyle \sum _{i=1}^{N}I(x_{i}^{(j)}=a_{jl}, y_{i}=c_{k}) + \lambda}{\displaystyle \sum _{i=1}^{N}I(y_{i}=c_{k})+S_{j}\lambda} \eqno{(4.10)}$$
+    $$ P_{\lambda}(Y=c_{k})= \frac {\displaystyle \sum _{i=1}^{N} I(y_{i}=c_{k}) +\lambda}{N+K\lambda} $$
+** 朴素贝叶斯算法实现(python)
+#+BEGIN_SRC python
+  # -*- coding: utf-8 -*-
+  import math
+  from vector import Vector
+
+
+  class NaiveBayesClassify(object):
+      def __init__(self):
+          self._I_yc = {}
+          self._I_yc_xi = {}
+          self._p_yc = {}
+          self._p_yc_xi = {}
+          self._plambda_yc = {}
+          self._plambda_yc_xi = {}
+
+      def training(self, T):
+          #贝叶斯估计参数, 默认取值 1.0
+          lambdap = 1.0
+          self._calc_prop(T, lambdap)
+
+      #type=1, 极大似然估计; type=2,贝叶斯估计
+      def predict(self, vec, type=1):
+          p_yc = self._p_yc if type==1 else self._plambda_yc
+          p_yc_xi = self._p_yc_xi if type==1 else self._plambda_yc_xi
+          dim = vec.dimension()
+          PX = dict()
+          for ck, prop in p_yc.iteritems():
+              PX[ck] = prop
+              for j in xrange(dim):
+                  Xj = vec[j]
+                  PX[ck] = PX[ck]*p_yc_xi[ck][j][Xj]
+          maxp = 0
+          maxck = None
+          for k, v in PX.iteritems():
+              if v>maxp:
+                  maxck = k
+                  maxp = v
+          return (maxck, maxp)
+
+      def _calc_prop(self, T, lambdap=1.0):
+          dim = T[0][0].dimension()
+          N = len(T)
+          I_yc = {}
+          I_yc_xi = {}
+          for (x_vec, y) in T:
+              if y in I_yc:
+                  I_yc[y] += 1
+              else:
+                  I_yc[y] = 1
+                  I_yc_xi[y] = {i:dict() for i in xrange(dim)}
+              for i in xrange(dim):
+                  xi = x_vec[i]
+                  if xi in I_yc_xi[y][i]:
+                      I_yc_xi[y][i][xi] += 1
+                  else:
+                      I_yc_xi[y][i][xi] = 1
+          self._I_yc = I_yc
+          self._I_yc_xi = I_yc_xi
+          self._calc_prop_type1(N, dim)
+          self._calc_prop_type2(N, dim, lambdap)
+
+      def _calc_prop_type1(self, N, dim):
+          self._p_yc = {k: 1.0*v/N for k,v in self._I_yc.iteritems()}
+          self._p_yc_xi = {k:dict() for k in self._I_yc.keys()}
+          for k, v in self._I_yc_xi.iteritems():
+              self._p_yc_xi[k] = {i:dict() for i in xrange(dim)}
+              for j in xrange(dim):
+                  vv = v[j]
+                  for kx, vx in vv.iteritems():
+                      self._p_yc_xi[k][j][kx] = 1.0*vx/self._I_yc[k]
+
+      def _calc_prop_type2(self, N, dim, lambdap = 1.0):
+          K = len(self._I_yc)
+          self._plambda_yc = {k: (1.0*v+lambdap)/(N+K*lambdap) for k,v in self._I_yc.iteritems()}
+          self._plambda_yc_xi = {k:dict() for k in self._I_yc.keys()}
+          for k, v in self._I_yc_xi.iteritems():
+              self._plambda_yc_xi[k] = {i:dict() for i in xrange(dim)}
+              for j in xrange(dim):
+                  vv = v[j]
+                  Sj = len(vv)
+                  for kx, vx in vv.iteritems():
+                      self._plambda_yc_xi[k][j][kx] = (1.0*vx+lambdap)/(self._I_yc[k] + Sj*lambdap)
+
+
+  T = [(Vector(1,"S"),-1),(Vector(1,"M"),-1),
+       (Vector(1,"M"),1),(Vector(1,"S"),1),
+       (Vector(1,"S"),-1),(Vector(2,"S"),-1),
+       (Vector(2,"M"),-1),(Vector(2,"M"),1),
+       (Vector(2,"L"),1),(Vector(2,"L"),1),
+       (Vector(3,"L"),1),(Vector(3,"M"),1),
+       (Vector(3,"M"),1),(Vector(3,"L"),1),(Vector(3,"L"),-1)]
+  x = Vector(2,"S")
+
+  bayes = NaiveBayesClassify()
+  bayes.training(T)
+  (ck, p) = bayes.predict(x)
+  print x.prettify(), ck, '{:.8f}'.format(p)
+  print "***********************************"
+
+  ck, p = bayes.predict(x, 2)
+  print x.prettify(), ck, '{:.8f}'.format(p)
+  print "***********************************"
+ 
+  #+END_SRC
